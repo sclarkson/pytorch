@@ -8,3 +8,8 @@
             - pytorch_linux_xenial_py3_clang5_android_ndk_r19c_x86_64_build
             - pytorch_linux_xenial_py3_clang5_android_ndk_r19c_arm_v7a_build
             - pytorch_linux_xenial_py3_clang5_android_ndk_r19c_arm_v8a_build
+
+      - pytorch_android_publish_snapshot:
+          requires:
+            - pytorch_android_gradle_build
+          context: org-member
