@@ -12,6 +12,23 @@ namespace c10 {
 // errors. These objects should be constructed from C10 schema once those
 // are available.
 
+struct Argument;
+struct FunctionSchema;
+
+namespace detail {
+inline bool defaultValueEquals_(
+    const c10::optional<IValue>& lhs,
+    const c10::optional<IValue>& rhs) {
+  if (lhs.has_value()) {
+    return rhs.has_value() && impl::shallowEquals(*lhs, *rhs);
+  } else {
+    return !rhs.has_value();
+  }
+}
+} // namespace detail
+
+bool operator==(const Argument& lhs, const Argument& rhs);
+
 struct Argument {
   Argument(
       std::string name = "",
@@ -78,6 +95,18 @@ struct Argument {
     return Argument(name_, new_type, N_, default_value_, kwarg_only_, alias_info_);
   }
 
+  // this function check whether this Argument is backward compatible with
+  // the old one. we consider the following cases are backward compatible:
+  //   1) two arguments are equal
+  //   2) if not a return value, old's type should be subtype of this;
+  //      otherwise, this arg's type should be subtype of old
+  //   3) old has no default value, and this Argument provides default
+  //      value
+  bool isBackwardCompatibleWith(
+      const Argument& old,
+      bool is_return,
+      std::ostream* why_not=nullptr) const;
+
 private:
   std::string name_;
   TypePtr type_;
@@ -94,16 +123,6 @@ private:
   bool is_inferred_type_;
 };
 
-namespace detail {
-inline bool defaultValueEquals_(const c10::optional<IValue>& lhs, const c10::optional<IValue>& rhs) {
-  if (lhs.has_value()) {
-    return rhs.has_value() && impl::shallowEquals(*lhs, *rhs);
-  } else {
-    return !rhs.has_value();
-  }
-}
-}
-
 inline bool operator==(const Argument& lhs, const Argument& rhs) {
   return lhs.name() == rhs.name()
           && *lhs.type() == *rhs.type()
@@ -117,6 +136,8 @@ struct OperatorName final {
   std::string name;
   std::string overload_name;
 };
+
+bool operator==(const FunctionSchema& lhs, const FunctionSchema& rhs);
 
 struct FunctionSchema {
   FunctionSchema(
@@ -146,6 +167,22 @@ struct FunctionSchema {
             std::move(std::move(returns)),
             is_vararg,
             is_varret) {}
+
+  // check whether this schema is backward compatible with the old one.
+  // the following conditions are considered as this schema is backward
+  // compatible with old:
+  //   1) two schemas are equal
+  //   2) this schema has the same or more positional args than old,
+  //      and any positional arg in this schema is backward compatible
+  //      with the corresponding one in old schema, which could be an arg
+  //      or a kwarg, if it has, or it must provide a default value
+  //   3) this schema has the same or more kwargs than old, and all the kwargs
+  //      in old schema can find the corresponding kwarg in this schema which
+  //      is backward compatible with the old kwarg, and the extra kwargs in
+  //      this schema must provide default values.
+  bool isBackwardCompatibleWith(
+      const FunctionSchema& old,
+      std::ostream* why_not=nullptr) const;
 
 private:
   OperatorName name_;
@@ -237,9 +274,9 @@ public:
     return false;
   }
 
-  // can a function with this schema be substituted for a function of rhs's 
+  // can a function with this schema be substituted for a function of rhs's
   // schema and have the program typecheck?
-  // as_method - if true, treat this schema as a method and ignore 
+  // as_method - if true, treat this schema as a method and ignore
   // the first argument, which will be the object in both cases
   bool isSubtypeOf(const FunctionSchema& rhs, bool as_method, std::ostream* why_not=nullptr) const;
 };
