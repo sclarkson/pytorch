@@ -876,7 +876,6 @@ graph(%x : Tensor,
         FileCheck().run(input_str, graph)
 
     @_tmp_donotuse_dont_inline_everything
-    @unittest.skip("temoprarily disable the test case, it will pass in later PR")
     def test_insert_observers(self):
         class Observer(torch.nn.Module):
             def __init__(self):
@@ -933,7 +932,6 @@ graph(%x : Tensor,
                    .run(str(m._c._get_module("conv")._get_method('conv2d_forward').graph))
 
     @_tmp_donotuse_dont_inline_everything
-    @unittest.skip("temoprarily disable the test case, it will pass in later PR")
     def test_insert_observers_child_qconfig(self):
         class Observer(torch.nn.Module):
             def __init__(self):
@@ -1004,8 +1002,6 @@ graph(%x : Tensor,
         check_observed(get_forward(m._c._get_module('sub')._get_module('linear')).graph)
 
     @_tmp_donotuse_dont_inline_everything
-    @unittest.skip("temoprarily disable the test since \
-    I want to put the insert_quant_dequant changes in a separate PR")
     def test_insert_observers_skip_values(self):
         import torch.nn.functional as F
 
@@ -1043,7 +1039,6 @@ graph(%x : Tensor,
         def test_module(module, relu_call, num_observers):
             m = torch.jit.script(module())
             observer = torch.jit.script(Observer())
-
             torch._C._jit_pass_constant_propagation(get_forward(m).graph)
             torch._C._jit_pass_constant_propagation(m._c._get_module('conv')._get_method('conv2d_forward').graph)
             qconfig_dict = {
